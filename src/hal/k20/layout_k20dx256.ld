@@ -19,7 +19,7 @@ MEMORY
     FIRC (R)      : ORIGIN = 0x000003FC, LENGTH = 4      /* Custom IRC user trim */
     FCFG (R)      : ORIGIN = 0x00000400, LENGTH = 16     /* Flash config */
     FLASH (RX)    : ORIGIN = 0x00000410, LENGTH = 256K - 0x410
-    RAM (WAIL)    : ORIGIN = 0x20000000 - 8K / 2, LENGTH = 64K
+    RAM (WAIL)    : ORIGIN = 0x20000000 - 64K / 2, LENGTH = 64K
 }
 
 REGION_ALIAS("vectors", VECT);
