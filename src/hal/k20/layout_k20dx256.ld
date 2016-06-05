@@ -3,9 +3,6 @@ __aeabi_unwind_cpp_pr1 = abort;
 __aeabi_unwind_cpp_pr2 = abort;
 __aeabi_memclr4 = __aeabi_memclr;
 
-/* FIXME(bgamari): Make stack base configurable? */
-__STACK_BASE  = 0x20001FFF;
-
 _data_load = LOADADDR(.data);
 
 INCLUDE iomem.ld
@@ -91,3 +88,4 @@ SECTIONS
     }
 }
 
+__STACK_BASE  = ORIGIN(ram) + LENGTH(ram);
