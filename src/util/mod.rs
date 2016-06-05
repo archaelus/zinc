@@ -21,3 +21,5 @@ pub mod shared;
 #[cfg(feature = "multitasking")] pub mod queue;
 
 mod lang_items;
+
+pub mod wait_for;
