@@ -45,6 +45,11 @@ SECTIONS
         *(.text*)
         *(.rodata .rodata.*)
     } > rom
+    /* ISR Table space in Ram, NOLOAD because it's initialized by code - just make space for it. */
+    .vector_ram (NOLOAD) : ALIGN(1024)
+    {
+        KEEP(*(.ram_isr_vector))
+    } > ram
 
     .data : ALIGN(4)
     {

@@ -17,6 +17,8 @@
 //! ISR Data for k20
 
 use core::option::Option::{self, Some, None};
+use hal::isr::isr_cortex_m4;
+use hal::cortex_common::scb;
 
 extern {
   fn isr_dma_0();
@@ -202,3 +204,25 @@ pub static NVICVectors: [Option<unsafe extern fn()>; ISRCount] = [
   None,
   Some(isr_soft),
 ];
+
+#[allow(non_upper_case_globals)]
+const TotalISRCount: usize = ISRCount + isr_cortex_m4::ISRCount;
+
+pub type VectorTable = [Option<unsafe extern fn()>; TotalISRCount];
+
+#[link_section=".ram_isr_vector"]
+#[allow(non_upper_case_globals)]
+#[no_mangle]
+pub static mut NVICVectorsRam: VectorTable = [None; TotalISRCount];
+
+pub fn install_ram_vectors() {
+    let cortex_isr_count = isr_cortex_m4::ISRCount;
+    for isr in 0 .. cortex_isr_count {
+        unsafe { NVICVectorsRam[isr] = isr_cortex_m4::ISRVectors[isr] }
+    }
+    for isr in 0 .. ISRCount {
+        unsafe { NVICVectorsRam[isr + cortex_isr_count] = NVICVectors[isr] }
+    }
+    let vtor = unsafe { (&NVICVectorsRam as *const VectorTable) as u32 };
+    scb::relocate_isrs(vtor);
+}
