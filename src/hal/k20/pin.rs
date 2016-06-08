@@ -41,7 +41,7 @@ pub struct Pin {
 
 /// Available port names.
 #[allow(missing_docs)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Port {
   PortA = 1,
   PortB = 2,
@@ -165,6 +165,10 @@ impl Pin {
       PortE => &reg::PORT_E,
     };
     return &port.pcr[self.pin as usize];
+  }
+
+  pub fn set_function(&self, func: Function) {
+    self.pcr().set_mux(func as u32);
   }
 }
 
