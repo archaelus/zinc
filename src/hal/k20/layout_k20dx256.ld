@@ -15,14 +15,15 @@ MEMORY
     VECT (R)      : ORIGIN = 0x00000000, LENGTH = 0x3FC  /* Vector area */
     FIRC (R)      : ORIGIN = 0x000003FC, LENGTH = 4      /* Custom IRC user trim */
     FCFG (R)      : ORIGIN = 0x00000400, LENGTH = 16     /* Flash config */
-    FLASH (RX)    : ORIGIN = 0x00000410, LENGTH = 256K - 0x410
-    RAM (WAIL)    : ORIGIN = 0x20000000 - 64K / 2, LENGTH = 64K
+    FLASH (RX)    : ORIGIN = 0x00000410, LENGTH = 256K - 0x410 /* Program Flash */
+    SRAML (WAIL)  : ORIGIN = 0x20000000 - 32K, LENGTH = 32K /* SRAM_L */
+    SRAMU (WAIL)  : ORIGIN = 0x20000000, LENGTH = 32K /* SRAM_L */
 }
 
 REGION_ALIAS("vectors", VECT);
 REGION_ALIAS("flash_config", FCFG)
 REGION_ALIAS("rom", FLASH);
-REGION_ALIAS("ram", RAM);
+REGION_ALIAS("ram", SRAML);
 
 SECTIONS
 {
