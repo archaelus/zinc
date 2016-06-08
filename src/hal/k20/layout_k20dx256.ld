@@ -27,13 +27,11 @@ REGION_ALIAS("ram", SRAML);
 
 SECTIONS
 {
-    .vector : ALIGN(4)
+    .vector : ALIGN(4) /* ISR Table in Flash */
     {
-        FILL(0xff)
-
         KEEP(*(.isr_vector))
         KEEP(*(.isr_vector_nvic))
-    } > vectors
+    } > vectors = 0xff
 
     .flashcfg : ALIGN(4)
     {
@@ -42,16 +40,40 @@ SECTIONS
 
     .text : ALIGN(4)
     {
-        FILL(0xff)
-        *(.text*)
-        *(.rodata .rodata.*)
-    } > rom
+        *(.text*) /* Code */
+        *(.rodata .rodata.*) /* constants/strings/... */
+        *(.glue_7)         /* glue arm to thumb code */
+        *(.glue_7t)        /* glue thumb to arm code */
+    } > rom = 0xff
+
+    /* Unwind tables */
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } >rom = 0xff
+
+    /* Unwind table indices */
+    .ARM : {
+        __exidx_start = .;
+        *(.ARM.exidx*)
+        __exidx_end = .;
+    } >rom = 0xff
+
+    /* Debug symbol info support */
+    .debug_gdb_scripts :
+    {
+        KEEP(*(.debug_gdb_scripts))
+    } > rom = 0xff
+
     /* ISR Table space in Ram, NOLOAD because it's initialized by code - just make space for it. */
     .vector_ram (NOLOAD) : ALIGN(1024)
     {
         KEEP(*(.ram_isr_vector))
     } > ram
 
+    /* Initialized data sections goes into RAM, startup code
+       initializes Ram from Flash (copies _data->_edata to
+       _data_load+offset) */
     .data : ALIGN(4)
     {
         _data = .;
@@ -62,6 +84,7 @@ SECTIONS
         _edata = .;
     } > ram AT>rom = 0xff
 
+    /* BSS sections initialized to 0 by startup code */
     .bss : ALIGN(4)
     {
         _bss = .;
@@ -83,14 +106,13 @@ SECTIONS
 
     /DISCARD/ :
     {
-        *(.glue_7*)  /* arm-thumb interworking */
         *(.v4_bx)  /* ARMv4 interworking fixup for missing BX */
         *(.vfp11_veneer)  /* VFP11 bugfixes s.a. http://sourceware.org/ml/binutils/2006-12/msg00196.html */
         *(.iplt .igot.plt)  /* STT_GNU_IFUNC symbols */
         *(.rel.*)  /* dynamic relocations */
-        *(.ARM.exidx*) /* index entries for section unwinding */
-        *(.ARM.extab*) /* exception unwinding information */
-        *(.debug_gdb_scripts)
+        /* *(.ARM.exidx*) /* index entries for section unwinding */
+        /* *(.ARM.extab*) /* exception unwinding information */
+        /* *(.debug_gdb_scripts) */
     }
 }
 
