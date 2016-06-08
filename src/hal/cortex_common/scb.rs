@@ -39,6 +39,23 @@ pub fn set_pendsv(val: bool) {
   }
 }
 
+/// Updates the base address for the ISR Vector Table. The vtor address must be 128 byte aligned (bottom 7 bits 0).
+///
+/// This allows you to relocate the vectory table into RAM (from Flash) to get reliable interrupt operations while writing to flash.
+///
+/// The default is 0 (Vector table at start of Flash)
+///
+/// # Examples
+///
+/// pub type VectorTable = [Option<unsafe extern fn()>; TotalISRCount];
+/// pub static mut NVICVectorsRam: VectorTable = [...; TotalISRCount];
+///
+/// relocate_isrs(unsafe { &NVICVectorsRam as *const VectorTable } as u32);
+pub fn relocate_isrs(vtor: u32) {
+    get_reg().vtor.ignoring_state()
+        .set_tbloff( vtor.rotate_right(7) );
+}
+
 mod reg {
   use volatile_cell::VolatileCell;
   use core::ops::Drop;
