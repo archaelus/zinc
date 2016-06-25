@@ -18,7 +18,6 @@
 /// Initialization functions for bringing up a k20 chip into operation
 pub mod init;
 
-pub mod sim;
 /// Pin function and control settings for k20 pins
 pub mod pin;
 /// K20 UART/Serial interface
