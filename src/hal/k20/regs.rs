@@ -900,6 +900,47 @@ pub mod reg {
             }
         }
     });
+
+    ioregs!(Pit = { //! Periodic Interrupt Timer
+        0x0000 => reg32 mcr { //! Module Control Register
+            1 => mdis { //! Module Disable
+                0 => PITClockEnabled,
+                1 => PITClockDisabled
+            },
+            0 => frz { //! Freeze
+                0 => RunInDebugMode,
+                1 => StopInDebugMode
+            }
+        },
+        0x0100 => group timer[4] {
+            0x00 => reg32 ldval {
+                31..0 => tsv //= Timer Start Value
+            },
+            0x04 => reg32 cval { //! Current Timer Value
+                31..0 => tvl
+            },
+            0x08 => reg32 tctrl { //! Timer Control
+                2 => chn { //! Chain Mode Timer[N-1] must expire to tick this timer
+                    0 => NotChained,
+                    1 => Chained
+                },
+                1 => tie { //! Timer Interrupt Enabled
+                    0 => InterruptsDisabled,
+                    1 => InterruptsEnabled
+                },
+                0 => ten { //! Timer Enabled (counting down)
+                    0 => TimerDisabled,
+                    1 => TimerEnabled
+                }
+            },
+            0x0C => reg32 tflg { //! Timer Flag Register
+                0 => tif: set_to_clear {
+                    0 => NoTimeoutYet,
+                    1 => Timeout
+                }
+            }
+        }
+    });
             }
         }
     });
@@ -911,5 +952,6 @@ pub mod reg {
     #[link_name="k20_iomem_RTC"] pub static RTC: Rtc;
     #[link_name="k20_iomem_PMC"] pub static PMC: Pmc;
     #[link_name="k20_iomem_SMC"] pub static SMC: Smc;
+    #[link_name="k20_iomem_PIT"] pub static PIT: Pit;
   }
 }
