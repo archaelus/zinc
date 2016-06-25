@@ -167,6 +167,7 @@ impl Pin {
     return &port.pcr[self.pin as usize];
   }
 
+  /// Set an alternate mode function for this pin.
   pub fn set_function(&self, func: Function) {
     self.pcr().set_mux(func as u32);
   }

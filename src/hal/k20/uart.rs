@@ -44,9 +44,13 @@ pub enum UARTPeripheral {
 /// UART Functions a pin can perform
 #[derive(PartialEq, Clone, Copy)]
 pub enum UARTPinFunction {
+  /// Serial Receive
   Rx,
+  /// Serial Transmit
   Tx,
+  /// Request to Send
   RTS,
+  /// Clear to Send
   CTS
 }
 

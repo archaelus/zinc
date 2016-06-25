@@ -18,6 +18,7 @@ pub fn system_clock() -> Option<u32> {
     }
 }
 
+/// Set the current SystemClock frequency (note, does not affect hardware registers, just the variables tracking effective frequency
 #[inline(always)]
 pub fn set_system_clock(frequency: u32) {
     unsafe { SystemClock = frequency }
@@ -32,6 +33,7 @@ pub fn bus_clock() -> Option<u32> {
     }
 }
 
+/// Set the current BusClock frequency (note, does not affect hardware registers, just the variables tracking effective frequency
 #[inline(always)]
 pub fn set_bus_clock(frequency: u32) {
     unsafe { BusClock = frequency }
@@ -46,6 +48,7 @@ pub fn flash_clock() -> Option<u32> {
     }    
 }
 
+/// Set the current FlashClock frequency (note, does not affect hardware registers, just the variables tracking effective frequency
 #[inline(always)]
 pub fn set_flash_clock(frequency: u32) {
     unsafe { FlashClock = frequency }
@@ -65,6 +68,10 @@ pub fn init_systick(ms: u32) {
 
     // count = 96_000_000 = 1s
     // count =    960_000 = 1s / 100 = 10ms
+    // To get MS = 10, count must be 960_000
+    // 96_000_000 / 1000 = 96_000
+    // 96_000 * 10 = 960_000
+    // 960_000 - 1 = 959_999 counter reset value
 
     systick::setup((freq/1000) * ms - 1);
     systick::enable();

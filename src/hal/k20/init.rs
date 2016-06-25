@@ -8,6 +8,7 @@ use hal::isr::isr_k20;
 
 use hal::k20::clocks;
 
+/// K20 initialization function for 16MHz crystal and 96MHz system clock
 #[inline(always)]
 pub fn startup(f_cpu: u32) {
     assert!(f_cpu == 96_000_000);

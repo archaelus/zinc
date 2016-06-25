@@ -629,7 +629,7 @@ pub mod reg {
         },
         0x0004 => reg32 tpr { //! RTC Time Prescaler Register
             0..15 => tpr
-        }, 
+        },
         0x0008 => reg32 tar { //! RTC Time Alarm Register
             0..31 => tar
         },
@@ -703,7 +703,7 @@ pub mod reg {
             3 => tcl { //! Time Compensation Lock
                 0 => Locked, //= Time Compensation Register writes ignored
                 1 => Unlocked
-            }            
+            }
         },
         0x001C => reg32 ier { //! RTC Interrupt Enable Register
             4 => tsie { //! Time Seconds Interrupt Enable
@@ -809,7 +809,7 @@ pub mod reg {
                 1 => HardwareReset
             },
             0..1 => lvdv { //! Low-Voltage Detect Voltage Select
-                0b00 => LowTripPoint, //= V(LVD) == V(LVDL) 
+                0b00 => LowTripPoint, //= V(LVD) == V(LVDL)
                 0b01 => HighTripPoint //= V(LVD) == V(LVDH)
             }
         },
@@ -828,7 +828,7 @@ pub mod reg {
                 0b01 => Mid1TripPoint, //=  V(LVW) == V(LVW2)
                 0b10 => Mid2TripPoint, //= V(LVW) == V(LVW3)
                 0b11 => HighTripPoint //= V(LVD) == V(LVW4)
-            }            
+            }
         },
         2 => reg8 regsc { //! Regulator Status And Control register
             4 => bgen { //! Bandgap Enable In VLPx Operation
@@ -896,11 +896,14 @@ pub mod reg {
                 0b000_1000 => VLPW,
                 0b001_0000 => VLPS,
                 0b010_0000 => LLS,
-                0b100_0000 => VLLS                
+                0b100_0000 => VLLS
             }
         }
     });
-    
+            }
+        }
+    });
+
   extern {
     #[link_name="k20_iomem_OSC"] pub static OSC: Osc;
     #[link_name="k20_iomem_MCG"] pub static MCG: Mcg;

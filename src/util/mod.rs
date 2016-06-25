@@ -22,4 +22,5 @@ pub mod shared;
 
 mod lang_items;
 
+/// Provides the wait_for macro, making it easier to write routines that must poll for register values.
 pub mod wait_for;
