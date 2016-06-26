@@ -29,9 +29,6 @@ use hal::k20::pin::Function::*;
 use self::UARTPeripheral::*;
 use self::UARTPinFunction::*;
 
-#[path="../../util/wait_for.rs"]
-#[macro_use] mod wait_for;
-
 /// Available UART peripherals.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, PartialEq)]

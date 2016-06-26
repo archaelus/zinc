@@ -1,7 +1,4 @@
 
-#[path="../../util/wait_for.rs"]
-#[macro_use] mod wait_for;
-
 use hal::mem_init;
 use hal::k20::regs::reg::*;
 use hal::isr::isr_k20;

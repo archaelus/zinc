@@ -15,6 +15,10 @@
 
 //! Helper methods.
 
+/// Provides the wait_for macro, making it easier to write routines that must poll for register values.
+#[macro_use]
+pub mod wait_for;
+
 pub mod strconv;
 pub mod support;
 pub mod shared;
@@ -22,5 +26,3 @@ pub mod shared;
 
 mod lang_items;
 
-/// Provides the wait_for macro, making it easier to write routines that must poll for register values.
-pub mod wait_for;
