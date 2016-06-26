@@ -1,0 +1,316 @@
+// Zinc, the bare metal stack for rust.
+// Copyright 2016 Geoff Cant <nem@erlang.geek.nz>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/*!
+SPI configuration.
+*/
+
+// use core::intrinsics::abort;
+
+use hal::k20::regs::reg;
+use hal::k20::regs::reg::{Spi,
+                          SIM,
+                          Sim_scgc6_spi0,
+                          Sim_scgc6_spi1,
+                          Spi_ctar_ctar_br,
+                          Spi_ctar_ctar_dbr,
+                          Spi_ctar_ctar_pbr,
+                          Spi_ctar_ctar_cpol,
+                          Spi_ctar_ctar_cpha,
+                          Spi_ctar_ctar_lsbfe,
+                          Spi_ctar_ctar_Update,
+                          Spi_ctar_ctar,
+                          Spi_mcr_mstr,
+                          Spi_mcr_halt,
+                          Spi_pushr_cont,
+                          Spi_pushr_ctas,
+                          Spi_pushr_eoq,
+                          Spi_pushr_ctcnt
+};
+use hal::k20::pin::Pin;
+use hal::k20::pin::Function::*;
+use hal::k20::pin::Port::*;
+use hal::k20::clocks;
+use self::SPIPeripheral::*;
+use self::SPIMode::*;
+use self::SPIRole::*;
+use self::SPISignificantBit::*;
+use self::SPIPinFunction::*;
+use self::BaudRate::*;
+
+/// The various SPI Peripherals
+#[derive(PartialEq, Clone, Copy)]
+pub enum SPIPeripheral {
+    /// First SPI Controller
+    SPI0,
+    /// Second SPI Controller
+    SPI1
+}
+
+/// SPI Polarity and Phase (SPI Mode settings)
+#[derive(PartialEq, Clone, Copy)]
+pub enum SPIMode {
+    /// CPOL = 0, CPHA = 0
+    Mode0,
+    /// CPOL = 0, CPHA = 1
+    Mode1,
+    /// CPOL = 1, CPHA = 0
+    Mode2,
+    /// CPOL = 1, CPHA = 1
+    Mode3
+}
+
+/// SPI Role (Master or Slave)
+#[derive(PartialEq, Clone, Copy)]
+pub enum SPIRole {
+    /// SPI Master
+    Master,
+    /// SPI Slave
+    Slave
+}
+
+/// SPI Significant Bit
+#[derive(PartialEq, Clone, Copy)]
+pub enum SPISignificantBit {
+    /// most significant bit first
+    MSB,
+    /// least significant bit first
+    LSB
+}
+
+impl SPIPeripheral {
+    fn reg(self) -> &'static Spi {
+        match self {
+            SPIPeripheral::SPI0 => &reg::SPI0,
+            SPIPeripheral::SPI1 => &reg::SPI1,
+        }
+    }
+}
+
+/// UART Functions a pin can perform
+#[derive(PartialEq, Clone, Copy)]
+pub enum SPIPinFunction {
+    /// SPI Clock
+    SCK,
+    /// SPI Data Out
+    SOUT,
+    /// SPI Data In
+    SIN,
+    /// Chip Select 0
+    PCS0,
+    /// Chip Select 1
+    PCS1,
+    /// Chip Select 2
+    PCS2,
+    /// Chip Select 3
+    PCS3,
+    /// Chip Select 4
+    PCS4,
+}
+
+/// A generic SPI controller
+#[derive(Clone, Copy)]
+pub struct SPI {
+    reg: &'static Spi,
+    peripheral: SPIPeripheral,
+    role: SPIRole,
+    setup: SPISetup
+}
+
+use core::default::Default;
+impl Default for SPI {
+    fn default() -> SPI {
+        SPI {
+            reg: &reg::SPI0,
+            peripheral: SPI0,
+            role: Master,
+            setup: Default::default()
+        }
+    }
+}
+
+
+/// SPI Baud Rate 
+#[derive(PartialEq, Clone, Copy)]
+pub enum BaudRate {
+    /// Normal Rate
+    Normal,
+    /// Double Rate
+    Doubled
+}
+
+/// SPI Transmission/Receive Configuration (baud rate, mode, msb/lsb/...)
+#[derive(PartialEq, Clone, Copy)]
+pub struct SPISetup {
+    rate: BaudRate,
+    mode: SPIMode,
+    sb: SPISignificantBit,
+    frame_size: u8
+}
+
+impl Default for SPISetup {
+    fn default() -> SPISetup {
+        SPISetup {
+            rate: Doubled,
+            mode: Mode0,
+            sb: MSB,
+            frame_size: 16
+        }
+    }
+}
+
+impl SPISetup {
+    fn update_ctar(&self, mut ctar: Spi_ctar_ctar_Update) {
+        let dbr = match self.rate {
+            Normal => Spi_ctar_ctar_dbr::Normal,
+            Doubled => Spi_ctar_ctar_dbr::Doubled
+        };
+        let cpol = match self.mode {
+            Mode0 => Spi_ctar_ctar_cpol::InactiveLow,
+            Mode1 => Spi_ctar_ctar_cpol::InactiveLow,
+            Mode2 => Spi_ctar_ctar_cpol::InactiveHigh,
+            Mode3 => Spi_ctar_ctar_cpol::InactiveHigh,
+        };
+        let cpha = match self.mode {
+            Mode0 => Spi_ctar_ctar_cpha::CaptureLeading,
+            Mode1 => Spi_ctar_ctar_cpha::ChangeLeading,
+            Mode2 => Spi_ctar_ctar_cpha::CaptureLeading,
+            Mode3 => Spi_ctar_ctar_cpha::ChangeLeading,
+        };
+        let lsbfe = match self.sb {
+            MSB => Spi_ctar_ctar_lsbfe::MSBFirst,
+            LSB => Spi_ctar_ctar_lsbfe::LSBFirst,
+        };
+
+        let fmsz:u32 = self.frame_size as u32 - 1;
+        assert!(3 <= fmsz && fmsz <= 15);
+
+        ctar
+            .set_dbr(dbr)
+            .set_cpol(cpol)
+            .set_cpha(cpha)
+            .set_lsbfe(lsbfe)
+            .set_fmsz(fmsz)
+            .set_pbr(Spi_ctar_ctar_pbr::Scale3) // Baud Rate scale static hacks for now
+            .set_br(Spi_ctar_ctar_br::Scale8);
+    }
+
+    fn baud_rate(&self, ctar: Spi_ctar_ctar) -> u32 {
+        ((clocks::bus_clock().expect("Bus clock not set.")
+          / ctar.pbr() as u32) * ctar.dbr() as u32) / ctar.br() as u32
+    }
+}
+
+impl SPI {
+    /// Produce a new SPI controller in write only mode (needs only clk and sout pins)
+    pub fn write_only(peripheral: SPIPeripheral,
+                      clk_pin: Pin, sout_pin: Pin) -> SPI {
+        let spi = SPI {
+            reg: peripheral.reg(),
+            peripheral: peripheral,
+            ..Default::default()
+        };
+
+        spi.init_clock_gate();
+
+        assert!(spi.role == Master);
+        
+        // Only setup ctar0 for now
+        spi.setup.update_ctar(spi.reg.ctar[0].ctar.ignoring_state());
+
+        let mstr = match spi.role {
+            Slave => Spi_mcr_mstr::Slave,
+            Master => Spi_mcr_mstr::Master,
+        };
+        
+        spi.reg.mcr.ignoring_state()
+            .set_mstr(mstr)
+            .clear_clr_rxf()
+            .clear_clr_txf()
+            .set_halt(Spi_mcr_halt::Stop);
+
+        spi.init_pin(clk_pin, SCK);
+        spi.init_pin(sout_pin, SOUT);
+
+        spi
+    }
+
+    fn init_clock_gate(&self) {
+        match self.peripheral {
+            SPI0 => {SIM.scgc6.set_spi0(Sim_scgc6_spi0::ClockEnabled);},
+            SPI1 => {SIM.scgc6.set_spi1(Sim_scgc6_spi1::ClockEnabled);},
+        }
+    }
+    
+    fn init_pin(&self, pin: Pin, function: SPIPinFunction) {
+        let altfn = match (pin.port, pin.pin, self.peripheral, function) {
+            (PortC, 0, SPI0, PCS4) => AltFunction2,
+            (PortC, 1, SPI0, PCS3) => AltFunction2,
+            (PortC, 2, SPI0, PCS2) => AltFunction2,
+            (PortC, 3, SPI0, PCS1) => AltFunction2,
+            (PortC, 4, SPI0, PCS0) => AltFunction2,
+            (PortC, 5, SPI0, SCK)  => AltFunction2,
+            (PortC, 6, SPI0, SOUT) => AltFunction2,
+            (PortC, 7, SPI0, SIN)  => AltFunction2,
+
+            (PortD, 0, SPI0, PCS0) => AltFunction2,
+            (PortD, 1, SPI0, SCK)  => AltFunction2,
+            (PortD, 2, SPI0, SOUT) => AltFunction2,
+            (PortD, 3, SPI0, SIN)  => AltFunction2,
+            (PortD, 4, SPI0, PCS1) => AltFunction2,
+            (PortD, 5, SPI0, PCS2) => AltFunction2,
+            (PortD, 6, SPI0, PCS3) => AltFunction2,
+
+            (PortE, 0, SPI1, PCS1)  => AltFunction2,
+            (PortE, 1, SPI1, SOUT)  => AltFunction2,
+            (PortE, 1, SPI1, SIN)   => AltFunction7,
+            (PortB, 16, SPI1, SOUT) => AltFunction2,
+            (PortB, 17, SPI1, SIN)  => AltFunction2,
+
+            _ => panic!("Invalid pin for function")
+        };
+        
+        pin.set_function(altfn);
+    }
+
+    fn clear_tx_fifo(&self) {
+        self.reg.mcr.clear_clr_txf();
+    }
+
+    /* The K20DX256 Has a TX FIFO of 4 16bit buffers, so the fastest you can transmit data is 2 32bit frames, 4 16 bit frames, 4 8 bit frames etc
+     */
+    /// Transfer a 32 bit Frame in MSB order
+    pub fn transmit(&self, data: u32) {
+        self.reg.mcr
+            .clear_clr_txf()
+            .set_halt(Spi_mcr_halt::Start);
+        // Most significant 16 bits of 32 bit frame
+        self.reg.pushr.ignoring_state()
+            .set_cont(Spi_pushr_cont::KeepPCS) // Keep CS[x] asserted
+            .set_ctas(Spi_pushr_ctas::CTAR0) // use CTAR0
+            .set_eoq(Spi_pushr_eoq::NotEndOfQueue) // this isn't the last command
+            .set_ctcnt(Spi_pushr_ctcnt::Clear) // First command, so clear count
+            .set_txdata(data.wrapping_shr(16));
+        // Least significant 16 bits of 32 bit frame
+        self.reg.pushr.ignoring_state()
+            .set_cont(Spi_pushr_cont::ResetPCS) // Keep CS[x] asserted
+            .set_ctas(Spi_pushr_ctas::CTAR0) // use CTAR0
+            .set_eoq(Spi_pushr_eoq::EndOfQueue) // this is the last command
+            .set_ctcnt(Spi_pushr_ctcnt::Keep) // Don't clear transmit counter
+            .set_txdata(data & 0xFF_FF);
+
+        wait_for!(self.reg.sr.txctr() == 0); // Wait for the TX FIFO to reach 0 entries (all commands finished)
+    }
+}

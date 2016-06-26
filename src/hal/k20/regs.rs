@@ -6,6 +6,7 @@
 pub mod reg {
     use volatile_cell::VolatileCell;
     use core::ops::Drop;
+    use core::convert::From;
 
     ioregs!(Osc = { //! System Oscillator
         0x0 => reg8 cr { //! System Oscillator Control Register
@@ -941,10 +942,331 @@ pub mod reg {
             }
         }
     });
+
+    ioregs!(Spi = { //! SPI Controller
+        0x000 => reg32 mcr { //! Module Configuration Register
+            31 => mstr { //! Master/Slave Mode Select
+                0 => Slave,
+                1 => Master
+            },
+            30 => cont_scke { //! Continuous SCK Enable
+                0 => Disabled,
+                1 => Enabled
+            },
+            29..28 => dconf { //! Configuration
+                0b00 => SPI
+            },
+            27 => frz { //! Freeze
+                0 => DoNotHalt, //= Don't halt serial transfers in debug mode
+                1 => Halt
+            },
+            26 => mtfe { //! Modifed Timing Enabled
+                0 => NormalTiming,
+                1 => ModifiedTiming
+            },
+            24 => rooe { //! Receive FIFO Overflow Overwrite Enable
+                0 => Ignore,
+                1 => Overwrite
+            },
+            16 => pcsis0 { //! Peripheral Chip Select 0 Inactive State
+                0 => Low,
+                1 => High
+            },
+            17 => pcsis1 { //! Peripheral Chip Select 1 Inactive State
+                0 => Low,
+                1 => High
+            },
+            18 => pcsis2 { //! Peripheral Chip Select 2 Inactive State
+                0 => Low,
+                1 => High
+            },
+            19 => pcsis3 { //! Peripheral Chip Select 3 Inactive State
+                0 => Low,
+                1 => High
+            },
+            20 => pcsis4 { //! Peripheral Chip Select 4 Inactive State
+                0 => Low,
+                1 => High
+            },
+            15 => doze { //! Doze Enable
+                0 => NoEffect,
+                1 => DisableSPI
+            },
+            14 => mdis { //! Module Disable
+                0 => EnableClocks,
+                1 => CanDisable
+            },
+            13 => dis_txf { //! Disable Transmit FIFO
+                0 => FIFO,
+                1 => DoubleBuffered
+            },
+            12 => dis_rxf { //! Disable Receive FIFO
+                0 => FIFO,
+                1 => DoubleBuffered
+            },
+            11 => clr_txf: set_to_clear, //= Flush the TX FIFO
+            10 => clr_rxf: set_to_clear, //= Flush the RX FIFO
+            9..8 => smpl_pt { //! Sample Point in modified transfer format
+                0b00 => NoClock,
+                0b01 => OneClock,
+                0b10 => TwoClocks
+            },
+            0 => halt { //! Starts and stops module transfers
+                0 => Start,
+                1 => Stop
+            }
+        },
+        0x008 => reg32 tcr { //! DSPI Transfer Count Register
+            31..16 => spi_tcnt //= SPI Transfer Counter
+        },
+        0x00C => group ctar[2] { //! DSPI Clock and Transfer Attributes Register (Master Mode)
+            0 => reg32 ctar {
+                31 => dbr { //! Double Baud Rate
+                    0 => Normal,
+                    1 => Doubled
+                },
+                30..27 => fmsz, //= Frame Size in bits (3=4..15=16) actual frame size is this value + 1 bit.
+                26 => cpol { //! Clock Polarity
+                    0 => InactiveLow,
+                    1 => InactiveHigh
+                },
+                25 => cpha { //! Clock Phase
+                    0 => CaptureLeading, //= Data is captured on the leading edge of SCK and changed on the following edge.
+                    1 => ChangeLeading //= Data is changed on the leading edge of SCK and captured on the following edge.
+                },
+                24 => lsbfe { //! LSB First
+                    0 => MSBFirst,
+                    1 => LSBFirst
+                },
+                23..22 => pcssck { //! PCS to SCK Delay Prescaler
+                    0b00 => Scale1,
+                    0b01 => Scale3,
+                    0b10 => Scale5,
+                    0b11 => Scale7
+                },
+                21..20 => pasc { //! After SCK Delay Prescaler
+                    0b00 => Scale1,
+                    0b01 => Scale3,
+                    0b10 => Scale5,
+                    0b11 => Scale7
+                },
+                19..18 => pdt { //! Delay after Transfer prescaler
+                    0b00 => Scale1,
+                    0b01 => Scale3,
+                    0b10 => Scale5,
+                    0b11 => Scale7
+                },
+                17..16 => pbr { //! Baud Rate Prescaler
+                    0b00 => Scale2,
+                    0b01 => Scale3,
+                    0b10 => Scale5,
+                    0b11 => Scale7
+                },
+                15..12 => cssck { //! PCS to SCK Delay Scaler
+                    0b0000 => Scale2,
+                    0b0001 => Scale4,
+                    0b0010 => Scale8,
+                    0b0011 => Scale16,
+                    0b0100 => Scale32,
+                    0b0101 => Scale64,
+                    0b0110 => Scale128,
+                    0b0111 => Scale256,
+                    0b1000 => Scale512,
+                    0b1001 => Scale1024,
+                    0b1010 => Scale2048,
+                    0b1011 => Scale4096,
+                    0b1100 => Scale8192,
+                    0b1101 => Scale16384,
+                    0b1110 => Scale32768,
+                    0b1111 => Scale65536
+                },
+                11..8 => asc, //= After SCK Delay Scaler
+                7..4 => dt, //= Delay After Transfer Scaler
+                3..0 => br { //! Baud Rate Scaler
+                    0b0000 => Scale2,
+                    0b0001 => Scale4,
+                    0b0010 => Scale6,
+                    0b0011 => Scale8,
+                    0b0100 => Scale16,
+                    0b0101 => Scale32,
+                    0b0110 => Scale64,
+                    0b0111 => Scale128,
+                    0b1000 => Scale256,
+                    0b1001 => Scale512,
+                    0b1010 => Scale1024,
+                    0b1011 => Scale2048,
+                    0b1100 => Scale4096,
+                    0b1101 => Scale8192,
+                    0b1110 => Scale16384,
+                    0b1111 => Scale32768
+                }
+            }
+        },
+        0x00C => reg32 ctar0_slave { //! DSPI Clock and Transfer Attributes Register (Slave Mode)
+            31..27 => fmsz, //= Frame Size (actual frame size is this +1, min is 3)
+            26 => cpol { //! Clock Polarity
+                0 => InactiveLow,
+                1 => InactiveHigh
+            },
+            25 => cpha { //! Clock Phase
+                0 => CaptureLeading, //= Data is captured on the leading edge of SCK and changed on the following edge.
+                1 => ChangeLeading //= Data is changed on the leading edge of SCK and captured on the following edge.
+            }
+        },
+        0x02C => reg32 sr { //! DSPI Status Register
+            31 => tcf: set_to_clear { //! Transfer Complete Flag
+                0 => TransferNotComplete,
+                1 => TransferComplete
+            },
+            30 => txrxs: set_to_clear { //! TX and RX Status
+                0 => Stopped,
+                1 => Running
+            },
+            28 => eoqf: set_to_clear { //! End of Queue Flag
+                0 => NotSet,
+                1 => Set
+            },
+            27 => tfuf: set_to_clear { //! Transmit FIFO Underflow Flag
+                0 => NoUnderflow,
+                1 => Underflow
+            },
+            25 => tfff: set_to_clear { //! Transmit FIFO Fill Flag
+                0 => Full, //= TX FIFO is full
+                1 => NotFull //= TX FIFO isn't full - you can push data
+            },
+            19 => rfof: set_to_clear { //! Receive FIFO Overflow Flag
+                0 => NoOverflow,
+                1 => Overflow
+            },
+            17 => rfdf: set_to_clear { //! Receive FIFO Drain Flag
+                0 => Empty, //= RX FIFO Empty
+                1 => NotEmpty //= RX FIFO has data
+            },
+            15..12 => txctr, //= TX FIFO Counter
+            11..8 => txnxtptr, //= Transmit Next Pointer
+            7..4 => rxctr, //= RX FIFO Counter
+            3..0 => popnxtptr //= Pop Next Pointer
+        },
+        0x030 => reg32 rser { //! DSPI DMA/Interrupt Request Select and Enable Register
+            31 => tcf_re { //! Transmission Complete Request Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            28 => eoqf_re { //! DSPI Finished Request Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            27 => tfuf_re { //! Transmit FIFO Underflow Request Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            25 => tfff_re { //! Transmit FIFO Fill Request Enable
+                0 => RequestDisabled,
+                1 => RequestEnabled
+            },
+            24 => tfff_dirs { //! Transmit FIFO Fill DMA or Interrupt Request
+                0 => Interrupt,
+                1 => DMA
+            },
+            19 => rfof_re { //! Receive FIFO Overflow Request Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            17 => rfdf_re { //! Receive FIFO Drain Request Enable
+                0 => RequestDisabled,
+                1 => RequestEnabled
+            },
+            16 => rfdf_dirs { //! Receive FIFO Drain DMA or Interrupt Request
+                0 => Interrupt,
+                1 => DMA
+            },
+        },
+        0x034 => reg32 pushr { //! DSPI Push TX FIFO Register in Master Mode
+            31 => cont { //! Continuous Peripheral Chip Select Enable
+                0 => ResetPCS,
+                1 => KeepPCS
+            },
+            30..28 => ctas { //! Clock and Transfer Attributes Select
+                0b000 => CTAR0,
+                0b001 => CTAR1
+            },
+            27 => eoq { //! End Of Queue
+                0 => NotEndOfQueue, //= non-last command in FIFO queue
+                1 => EndOfQueue //= Last command in FIFO queue
+            },
+            26 => ctcnt { //! Clear Transfer Counter
+                0 => Keep, //= Keep TCR[CTNT] before transmitting frame
+                1 => Clear //= Clear TCR[CTNT] before transmitting frame
+            },
+            21 => pcs5 { //! PCS[5]
+                0 => Negate,
+                1 => Assert
+            },
+            20..16 => pcs, //= PCS[5..0] Clock Select lines to assert
+            15..0 => txdata //= Transmit Data
+        },
+        0x034 => reg32 pushr_slave { //! DSPI Push TX FIFO Register in SLave Mode
+            15..0 => rxdata //= Receive Data
+        },
+        0x038 => reg32 popr { //! DSPI Pop RX FIFO Register
+            31..0 => rxdata
+        },
+        0x03C => group txfr[4] { //! DSPI Transmit FIFO Registers for debugging
+            0x00 => reg32 txfr {
+                31..16 => txcmd, //= Transmit Command (Master mode)
+                15..00 => txdata //= Transmit Data
+            }
+        },
+        0x07C => group rxfr[4] { //! DSPI Receive FIFO Registers for debugging
+            0x00 => reg32 rxfr {
+                31..0 => rxdata: ro //= Receive Data
             }
         }
     });
 
+    impl From<Spi_ctar_ctar_dbr> for u32 {
+        fn from(dbr: Spi_ctar_ctar_dbr) -> u32 {
+            match dbr {
+                Spi_ctar_ctar_dbr::Normal => 1,
+                Spi_ctar_ctar_dbr::Doubled => 2,
+            }
+        }
+    }
+    
+    impl From<Spi_ctar_ctar_pbr> for u32 {
+        fn from(pbr: Spi_ctar_ctar_pbr) -> u32 {
+            match pbr {
+                Spi_ctar_ctar_pbr::Scale2 => 2,
+                Spi_ctar_ctar_pbr::Scale3 => 3,
+                Spi_ctar_ctar_pbr::Scale5 => 5,
+                Spi_ctar_ctar_pbr::Scale7 => 7,
+            }
+        }
+    }
+    
+    impl From<Spi_ctar_ctar_br> for u32 {
+        fn from(br: Spi_ctar_ctar_br) -> u32 {
+            match br {
+                Spi_ctar_ctar_br::Scale2 => 2,
+                Spi_ctar_ctar_br::Scale4 => 4,
+                Spi_ctar_ctar_br::Scale6 => 6,
+                Spi_ctar_ctar_br::Scale8 => 8,
+                Spi_ctar_ctar_br::Scale16 => 16,
+                Spi_ctar_ctar_br::Scale32 => 32,
+                Spi_ctar_ctar_br::Scale64 => 64,
+                Spi_ctar_ctar_br::Scale128 => 128,
+                Spi_ctar_ctar_br::Scale256 => 256,
+                Spi_ctar_ctar_br::Scale512 => 512,
+                Spi_ctar_ctar_br::Scale1024 => 1024,
+                Spi_ctar_ctar_br::Scale2048 => 2048,
+                Spi_ctar_ctar_br::Scale4096 => 4096,
+                Spi_ctar_ctar_br::Scale8192 => 8192,
+                Spi_ctar_ctar_br::Scale16384 => 16384,
+                Spi_ctar_ctar_br::Scale32768 => 32768
+            }
+        }
+    }
+  
   extern {
     #[link_name="k20_iomem_OSC"] pub static OSC: Osc;
     #[link_name="k20_iomem_MCG"] pub static MCG: Mcg;
@@ -953,5 +1275,7 @@ pub mod reg {
     #[link_name="k20_iomem_PMC"] pub static PMC: Pmc;
     #[link_name="k20_iomem_SMC"] pub static SMC: Smc;
     #[link_name="k20_iomem_PIT"] pub static PIT: Pit;
+    #[link_name="k20_iomem_SPI0"] pub static SPI0: Spi;
+    #[link_name="k20_iomem_SPI1"] pub static SPI1: Spi;
   }
 }

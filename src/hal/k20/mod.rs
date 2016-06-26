@@ -24,6 +24,8 @@ pub mod pin;
 pub mod uart;
 /// K20 Software watchdog timer interface
 pub mod watchdog;
+/// K20 SPI interface
+pub mod spi;
 /// K20 register definitions
 pub mod regs;
 
