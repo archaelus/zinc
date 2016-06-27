@@ -1244,15 +1244,15 @@ pub mod reg {
         }
     }
   
-  extern {
-    #[link_name="k20_iomem_OSC"] pub static OSC: Osc;
-    #[link_name="k20_iomem_MCG"] pub static MCG: Mcg;
-    #[link_name="k20_iomem_SIM"] pub static SIM: Sim;
-    #[link_name="k20_iomem_RTC"] pub static RTC: Rtc;
-    #[link_name="k20_iomem_PMC"] pub static PMC: Pmc;
-    #[link_name="k20_iomem_SMC"] pub static SMC: Smc;
-    #[link_name="k20_iomem_PIT"] pub static PIT: Pit;
-    #[link_name="k20_iomem_SPI0"] pub static SPI0: Spi;
-    #[link_name="k20_iomem_SPI1"] pub static SPI1: Spi;
-  }
+    extern {
+        #[link_name="k20_iomem_OSC"] pub static OSC: Osc;
+        #[link_name="k20_iomem_MCG"] pub static MCG: Mcg;
+        #[link_name="k20_iomem_SIM"] pub static SIM: Sim;
+        #[link_name="k20_iomem_RTC"] pub static RTC: Rtc;
+        #[link_name="k20_iomem_PMC"] pub static PMC: Pmc;
+        #[link_name="k20_iomem_SMC"] pub static SMC: Smc;
+        #[link_name="k20_iomem_PIT"] pub static PIT: Pit;
+        #[link_name="k20_iomem_SPI0"] pub static SPI0: Spi;
+        #[link_name="k20_iomem_SPI1"] pub static SPI1: Spi;
+    }
 }
