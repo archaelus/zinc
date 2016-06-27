@@ -34,10 +34,14 @@ use hal::k20::regs::reg::{Spi,
                           Spi_ctar_ctar,
                           Spi_mcr_mstr,
                           Spi_mcr_halt,
+                          Spi_mcr_mdis,
                           Spi_pushr_cont,
                           Spi_pushr_ctas,
                           Spi_pushr_eoq,
-                          Spi_pushr_ctcnt
+                          Spi_pushr_ctcnt,
+                          Spi_pushr_Update,
+                          Spi_sr_eoqf,
+                          Spi_sr_tfff
 };
 use hal::k20::pin::Pin;
 use hal::k20::pin::Function::*;
@@ -157,7 +161,6 @@ pub struct SPISetup {
     rate: BaudRate,
     mode: SPIMode,
     sb: SPISignificantBit,
-    frame_size: u8
 }
 
 impl Default for SPISetup {
@@ -166,13 +169,12 @@ impl Default for SPISetup {
             rate: Doubled,
             mode: Mode0,
             sb: MSB,
-            frame_size: 16
         }
     }
 }
 
 impl SPISetup {
-    fn update_ctar(&self, mut ctar: Spi_ctar_ctar_Update) {
+    fn update_ctar(&self, mut ctar: Spi_ctar_ctar_Update, frame_size: u32) {
         let dbr = match self.rate {
             Normal => Spi_ctar_ctar_dbr::Normal,
             Doubled => Spi_ctar_ctar_dbr::Doubled
@@ -194,7 +196,7 @@ impl SPISetup {
             LSB => Spi_ctar_ctar_lsbfe::LSBFirst,
         };
 
-        let fmsz:u32 = self.frame_size as u32 - 1;
+        let fmsz:u32 = frame_size as u32 - 1;
         assert!(3 <= fmsz && fmsz <= 15);
 
         ctar
@@ -204,12 +206,18 @@ impl SPISetup {
             .set_lsbfe(lsbfe)
             .set_fmsz(fmsz)
             .set_pbr(Spi_ctar_ctar_pbr::Scale3) // Baud Rate scale static hacks for now
-            .set_br(Spi_ctar_ctar_br::Scale8);
+            .set_br(Spi_ctar_ctar_br::Scale32)
+            .set_dt(1);
     }
 
-    fn baud_rate(&self, ctar: Spi_ctar_ctar) -> u32 {
-        ((clocks::bus_clock().expect("Bus clock not set.")
-          / ctar.pbr() as u32) * ctar.dbr() as u32) / ctar.br() as u32
+    /// Returns the baud rate specified by this ctar
+    pub fn baud_rate(&self, ctar: Spi_ctar_ctar) -> u32 {
+        let fsys = clocks::bus_clock().expect("Bus clock not set.");
+        let dbr = ctar.dbr() as u32;
+        let pbr = ctar.pbr() as u32;
+        let br = ctar.br() as u32;
+
+        ((fsys / pbr) / br) * dbr
     }
 }
 
@@ -223,23 +231,21 @@ impl SPI {
             ..Default::default()
         };
 
-        spi.init_clock_gate();
-
-        assert!(spi.role == Master);
-        
-        // Only setup ctar0 for now
-        spi.setup.update_ctar(spi.reg.ctar[0].ctar.ignoring_state());
-
         let mstr = match spi.role {
-            Slave => Spi_mcr_mstr::Slave,
+            Slave => unimplemented!(),
             Master => Spi_mcr_mstr::Master,
         };
-        
+
+        spi.init_clock_gate();
+
         spi.reg.mcr.ignoring_state()
             .set_mstr(mstr)
-            .clear_clr_rxf()
+            .set_mdis(Spi_mcr_mdis::EnableClocks)
             .clear_clr_txf()
+            .clear_clr_rxf()
             .set_halt(Spi_mcr_halt::Stop);
+
+        spi.default_ctars();
 
         spi.init_pin(clk_pin, SCK);
         spi.init_pin(sout_pin, SOUT);
@@ -252,6 +258,18 @@ impl SPI {
             SPI0 => {SIM.scgc6.set_spi0(Sim_scgc6_spi0::ClockEnabled);},
             SPI1 => {SIM.scgc6.set_spi1(Sim_scgc6_spi1::ClockEnabled);},
         }
+    }
+
+    fn default_ctars(&self) {
+        // Setup CTAR0 for 8 bit transfers
+        self.setup.update_ctar(self.reg.ctar[0].ctar.ignoring_state(), 8);
+        // Setup CTAR1 for 16 bit transfers
+        self.setup.update_ctar(self.reg.ctar[1].ctar.ignoring_state(), 16);
+    }
+
+    /// Return the currently configured Baud-rate in Hz.
+    pub fn baud_rate(&self) -> u32 {
+        self.setup.baud_rate(self.reg.ctar[1].ctar)
     }
     
     fn init_pin(&self, pin: Pin, function: SPIPinFunction) {
@@ -285,32 +303,122 @@ impl SPI {
         pin.set_function(altfn);
     }
 
-    fn clear_tx_fifo(&self) {
-        self.reg.mcr.clear_clr_txf();
-    }
-
-    /* The K20DX256 Has a TX FIFO of 4 16bit buffers, so the fastest you can transmit data is 2 32bit frames, 4 16 bit frames, 4 8 bit frames etc
-     */
-    /// Transfer a 32 bit Frame in MSB order
-    pub fn transmit(&self, data: u32) {
+    fn init_transmission(&self) {
+        // Clear TX FIFO and set DSPI to start
         self.reg.mcr
             .clear_clr_txf()
             .set_halt(Spi_mcr_halt::Start);
-        // Most significant 16 bits of 32 bit frame
-        self.reg.pushr.ignoring_state()
-            .set_cont(Spi_pushr_cont::KeepPCS) // Keep CS[x] asserted
-            .set_ctas(Spi_pushr_ctas::CTAR0) // use CTAR0
-            .set_eoq(Spi_pushr_eoq::NotEndOfQueue) // this isn't the last command
-            .set_ctcnt(Spi_pushr_ctcnt::Clear) // First command, so clear count
-            .set_txdata(data.wrapping_shr(16));
-        // Least significant 16 bits of 32 bit frame
-        self.reg.pushr.ignoring_state()
-            .set_cont(Spi_pushr_cont::ResetPCS) // Keep CS[x] asserted
-            .set_ctas(Spi_pushr_ctas::CTAR0) // use CTAR0
-            .set_eoq(Spi_pushr_eoq::EndOfQueue) // this is the last command
-            .set_ctcnt(Spi_pushr_ctcnt::Keep) // Don't clear transmit counter
-            .set_txdata(data & 0xFF_FF);
+        // Clear End of Queue Flag
+        //self.reg.sr
+        //    .clear_eoqf();
+    }
 
-        wait_for!(self.reg.sr.txctr() == 0); // Wait for the TX FIFO to reach 0 entries (all commands finished)
+    fn wait_for_end_of_queue(&self) {
+        wait_for!(self.reg.sr.eoqf() == Spi_sr_eoqf::Set); // Wait for the TX FIFO to reach 0 entries (all commands finished)
+    }
+
+    fn wait_for_tx_fifo_space(&self) {
+        wait_for!(self.reg.sr.tfff() == Spi_sr_tfff::NotFull);
+    }
+}
+
+use core::result::Result;
+
+/// Vairous SPI Errors that can occur
+pub enum SPIError {
+    /// Shruggy emoticon - no clue, but something did go wrong.
+    Unknown
+}
+
+/// The result of an SPI Transmission - either a number of values sent, or an error
+pub type SPITxResult = Result<u32, SPIError>;
+
+/// A Trait for types that we know how to transmit via SPI. This trait allows us to optimize sending given that the hardware mechanism can only transmit 4-16 bit values.
+pub trait SPITransmit {
+    /// Transmits a value and returns a result (Number of Frames on success, or an SPIError)
+    fn transmit(&self, &SPI) -> SPITxResult;
+}
+
+/* The K20DX256 Has a TX FIFO of 4 16bit buffers, so the fastest you can transmit data is 2 32bit frames, 4 16 bit frames, 4 8 bit frames etc
+ */
+impl<'a> SPITransmit for &'a [u32] {
+    /// Transfer a 32 bit Frame in MSB order
+    /// Will transmit 32 bit words as individual frames inside one queue
+    fn transmit(&self, spi: &SPI) -> SPITxResult {
+        assert!(self.len() > 0);
+        spi.init_transmission();
+
+        let end = self.len() - 1;
+        for i in 0..self.len() {
+            // Clear End of Queue Flag
+            spi.reg.sr
+                .clear_eoqf();
+            
+            spi.wait_for_tx_fifo_space();
+            {
+                let mut ms16 = spi.reg.pushr.ignoring_state();
+
+                // If this is the first word to transmit, start a queue
+                if i == 0 { ms16.start_queue(); }
+
+                // Most significant 16 bits of 32 bit frame
+                ms16.start_frame()
+                    .tx16(self[i].wrapping_shr(16) as u16);
+            }
+
+            spi.wait_for_tx_fifo_space();
+            {
+                let mut ls16 = spi.reg.pushr.ignoring_state();
+
+                // Least significant 16 bits of 32 bit frame
+                ls16.tx16((self[i] & 0xFF_FF) as u16)
+                    .end_frame();
+                
+                // If this is the last word to transmit, end the queue
+                //if i == end { ls16.end_queue(); }
+                ls16.end_queue();
+            }
+            
+            spi.wait_for_end_of_queue();
+        }
+
+        match spi.reg.tcr.spi_tcnt() {
+            frames if frames == self.len() as u32 * 2 => Ok(frames / 2),
+            _ => Err(SPIError::Unknown)
+        }
+    }
+}
+
+impl<'a> Spi_pushr_Update<'a> {
+    
+    fn start_queue<'b>(&'b mut self) -> &'b mut Spi_pushr_Update<'a> {
+        self.set_ctcnt(Spi_pushr_ctcnt::Clear) // First command, so clear count
+    }
+
+    fn start_frame<'b>(&'b mut self) -> &'b mut Spi_pushr_Update<'a> {
+        self.set_cont(Spi_pushr_cont::KeepPCS) // Keep CS[x] asserted
+    }
+
+    fn tx16<'b>(&'b mut self, data: u16) -> &'b mut Spi_pushr_Update<'a> {
+        self
+            .set_eoq(Spi_pushr_eoq::NotEndOfQueue) // Default not end of queue
+            .set_ctas(Spi_pushr_ctas::CTAR1) // use CTAR1 (16bit transfer)
+            .set_txdata(data as u32)
+    }
+
+    fn tx8<'b>(&'b mut self, data: u8) -> &'b mut Spi_pushr_Update<'a> {
+        self
+            .set_eoq(Spi_pushr_eoq::NotEndOfQueue) // Default not end of queue
+            .set_ctas(Spi_pushr_ctas::CTAR0) // use CTAR0 (8bit transfer)
+            .set_txdata(data as u32)
+    }
+
+    fn end_frame<'b>(&'b mut self) -> &'b mut Spi_pushr_Update<'a> {
+        self.set_cont(Spi_pushr_cont::ResetPCS) // Deassert PCS (end of frame)
+    }
+
+    fn end_queue<'b>(&'b mut self) -> &'b mut Spi_pushr_Update<'a> {
+        self.set_eoq(Spi_pushr_eoq::EndOfQueue) // this is the last command
+
     }
 }
