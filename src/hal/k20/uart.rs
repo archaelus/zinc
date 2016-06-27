@@ -185,6 +185,19 @@ impl CharIO for UART {
   }
 }
 
+use core::fmt::{Write, Result};
+
+impl Write for UART {
+    fn write_str(&mut self, s: &str) -> Result {
+        for byte in s.bytes() {
+            wait_for!(self.reg.s1.tdre());
+            self.reg.d.set_re(byte as u8);
+        }
+        Ok(())
+    }
+}
+
+
 /// Register definitions
 pub mod reg {
   use volatile_cell::VolatileCell;
