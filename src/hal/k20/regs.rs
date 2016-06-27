@@ -968,26 +968,7 @@ pub mod reg {
                 0 => Ignore,
                 1 => Overwrite
             },
-            16 => pcsis0 { //! Peripheral Chip Select 0 Inactive State
-                0 => Low,
-                1 => High
-            },
-            17 => pcsis1 { //! Peripheral Chip Select 1 Inactive State
-                0 => Low,
-                1 => High
-            },
-            18 => pcsis2 { //! Peripheral Chip Select 2 Inactive State
-                0 => Low,
-                1 => High
-            },
-            19 => pcsis3 { //! Peripheral Chip Select 3 Inactive State
-                0 => Low,
-                1 => High
-            },
-            20 => pcsis4 { //! Peripheral Chip Select 4 Inactive State
-                0 => Low,
-                1 => High
-            },
+            20..16 => pcsis, //= Peripheral Chip Select [4..0] 0 = Inactive Low
             15 => doze { //! Doze Enable
                 0 => NoEffect,
                 1 => DisableSPI
@@ -1198,11 +1179,7 @@ pub mod reg {
                 0 => Keep, //= Keep TCR[CTNT] before transmitting frame
                 1 => Clear //= Clear TCR[CTNT] before transmitting frame
             },
-            21 => pcs5 { //! PCS[5]
-                0 => Negate,
-                1 => Assert
-            },
-            20..16 => pcs, //= PCS[5..0] Clock Select lines to assert
+            21..16 => pcs, //= PCS[5..0] Clock Select lines to assert
             15..0 => txdata //= Transmit Data
         },
         0x034 => reg32 pushr_slave { //! DSPI Push TX FIFO Register in SLave Mode
