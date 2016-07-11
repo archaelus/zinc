@@ -59,6 +59,7 @@ extern crate rlibc;
 
 #[cfg(test)] #[macro_use(expect)] extern crate expectest;
 
+#[cfg(feature = "loglib")] #[macro_use] extern crate log;
 
 #[macro_use] pub mod util;
 

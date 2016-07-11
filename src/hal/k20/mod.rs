@@ -22,6 +22,11 @@ pub mod init;
 pub mod pin;
 /// K20 UART/Serial interface
 pub mod uart;
+
+#[cfg(feature = "loglib")]
+/// UART Debug Logging module
+pub mod uart_logger;
+
 /// K20 Software watchdog timer interface
 pub mod watchdog;
 /// K20 SPI interface
