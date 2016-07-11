@@ -27,20 +27,50 @@ pub fn init() {
             .set_tce(Rtc_sr_tce::Disabled); // Disable Time Counter
         // Add 20pf load to RTC clock, and enable the RTC oscillator
         RTC.cr.ignoring_state()
-            .set_sc16p(true)
+            .set_sc8p(true)
             .set_sc4p(true)
             .set_osce(Rtc_cr_osce::Enabled);
     }
 }
 
+/// Disable the RTC counter, set prescaler to 0, set the time, return the RTC counter to its original state.
+pub fn set(time: u32) {
+    let tce = RTC.sr.tce();
+    if tce == Rtc_sr_tce::Enabled {
+        RTC.sr.set_tce(Rtc_sr_tce::Disabled);
+    }
+
+    // Set prescaler to 0
+    RTC.tpr.set_tpr(0);
+    // Set the clock time
+    RTC.tsr.set_tsr(time);
+
+    if tce == Rtc_sr_tce::Enabled {
+        RTC.sr.set_tce(Rtc_sr_tce::Enabled);
+    }
+}
+
 /// Control the RTC Seconds Interrupt (true enabled the interrupt).
 pub fn tick_isr(enabled: bool) {
-    match enabled {
-        true => {
-            RTC.ier.set_tsie(Rtc_ier_tsie::Enabled);
+    RTC.ier.set_tsie(match enabled {
+        true => Rtc_ier_tsie::Enabled,
+        false => Rtc_ier_tsie::Disabled
+    });
+}
+
+/// Enable the RTC time counter
+pub fn enable() {
+    RTC.sr.set_tce(Rtc_sr_tce::Enabled);
+}
+
+/// Return the value of the K20 RTC's Time Second Register, or None if the time is invalid.
+pub fn time() -> Option<u32> {
+    match RTC.sr.tif() {
+        Rtc_sr_tif::TimeValid => {
+            Some(RTC.tsr.tsr())
+        },
+        Rtc_sr_tif::TimeInvalid => {
+            None
         }
-        false => {
-            RTC.ier.set_tsie(Rtc_ier_tsie::Disabled);
-        }
-    };
+    }
 }
