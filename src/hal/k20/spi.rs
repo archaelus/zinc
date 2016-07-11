@@ -166,7 +166,7 @@ pub struct SPISetup {
 impl Default for SPISetup {
     fn default() -> SPISetup {
         SPISetup {
-            rate: Doubled,
+            rate: Normal,
             mode: Mode0,
             sb: MSB,
         }
@@ -200,14 +200,13 @@ impl SPISetup {
         assert!(3 <= fmsz && fmsz <= 15);
 
         ctar
-            .set_dbr(dbr)
+            .set_dbr(Spi_ctar_ctar_dbr::Normal)
             .set_cpol(cpol)
             .set_cpha(cpha)
             .set_lsbfe(lsbfe)
             .set_fmsz(fmsz)
-            .set_pbr(Spi_ctar_ctar_pbr::Scale3) // Baud Rate scale static hacks for now
-            .set_br(Spi_ctar_ctar_br::Scale32)
-            .set_dt(1);
+            .set_pbr(Spi_ctar_ctar_pbr::Scale5) // Baud Rate scale static hacks for now
+            .set_br(Spi_ctar_ctar_br::Scale8);
     }
 
     /// Returns the baud rate specified by this ctar
@@ -217,7 +216,7 @@ impl SPISetup {
         let pbr = ctar.pbr() as u32;
         let br = ctar.br() as u32;
 
-        ((fsys / pbr) / br) * dbr
+        (fsys * dbr) / (br * pbr)
     }
 }
 
@@ -325,6 +324,7 @@ impl SPI {
 use core::result::Result;
 
 /// Vairous SPI Errors that can occur
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum SPIError {
     /// Shruggy emoticon - no clue, but something did go wrong.
     Unknown
@@ -363,7 +363,7 @@ impl<'a> SPITransmit for &'a [u32] {
 
                 // Most significant 16 bits of 32 bit frame
                 ms16.start_frame()
-                    .tx16(self[i].wrapping_shr(16) as u16);
+                    .tx16((self[i] & 0xFF_FF_00_00).wrapping_shr(16) as u16);
             }
 
             spi.wait_for_tx_fifo_space();
@@ -371,7 +371,7 @@ impl<'a> SPITransmit for &'a [u32] {
                 let mut ls16 = spi.reg.pushr.ignoring_state();
 
                 // Least significant 16 bits of 32 bit frame
-                ls16.tx16((self[i] & 0xFF_FF) as u16)
+                ls16.tx16((self[i] & 0x00_00_FF_FF) as u16)
                     .end_frame();
                 
                 // If this is the last word to transmit, end the queue
@@ -384,6 +384,31 @@ impl<'a> SPITransmit for &'a [u32] {
 
         match spi.reg.tcr.spi_tcnt() {
             frames if frames == self.len() as u32 * 2 => Ok(frames / 2),
+            _ => Err(SPIError::Unknown)
+        }
+    }
+}
+
+impl SPITransmit for u32 {
+    fn transmit(&self, spi: &SPI) -> SPITxResult {
+        spi.init_transmission();
+        spi.reg.sr
+            .clear_eoqf();
+
+        spi.reg.pushr.ignoring_state()
+            .start_queue()
+            .start_frame()
+            .tx16((self & 0xFF_FF_00_00).wrapping_shr(16) as u16);
+
+        spi.reg.pushr.ignoring_state()
+            .tx16((self & 0x00_00_FF_FF) as u16)
+            .end_frame()
+            .end_queue();
+
+        spi.wait_for_end_of_queue();
+
+        match spi.reg.tcr.spi_tcnt() {
+            frames if frames == 2 => Ok(1),
             _ => Err(SPIError::Unknown)
         }
     }

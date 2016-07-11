@@ -1182,9 +1182,9 @@ pub mod reg {
             21..16 => pcs, //= PCS[5..0] Clock Select lines to assert
             15..0 => txdata //= Transmit Data
         },
-        0x034 => reg32 pushr_slave { //! DSPI Push TX FIFO Register in SLave Mode
-            15..0 => rxdata //= Receive Data
-        },
+        //0x034 => reg32 pushr_slave { //! DSPI Push TX FIFO Register in SLave Mode
+        //    15..0 => rxdata //= Receive Data
+        //},
         0x038 => reg32 popr { //! DSPI Pop RX FIFO Register
             31..0 => rxdata
         },
