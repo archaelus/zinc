@@ -55,7 +55,7 @@ use self::SPIPinFunction::*;
 use self::BaudRate::*;
 
 /// The various SPI Peripherals
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SPIPeripheral {
     /// First SPI Controller
     SPI0,
@@ -64,7 +64,7 @@ pub enum SPIPeripheral {
 }
 
 /// SPI Polarity and Phase (SPI Mode settings)
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SPIMode {
     /// CPOL = 0, CPHA = 0
     Mode0,
@@ -77,7 +77,7 @@ pub enum SPIMode {
 }
 
 /// SPI Role (Master or Slave)
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SPIRole {
     /// SPI Master
     Master,
@@ -86,7 +86,7 @@ pub enum SPIRole {
 }
 
 /// SPI Significant Bit
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SPISignificantBit {
     /// most significant bit first
     MSB,
@@ -104,7 +104,7 @@ impl SPIPeripheral {
 }
 
 /// UART Functions a pin can perform
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SPIPinFunction {
     /// SPI Clock
     SCK,
@@ -147,7 +147,7 @@ impl Default for SPI {
 
 
 /// SPI Baud Rate 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum BaudRate {
     /// Normal Rate
     Normal,
@@ -156,7 +156,7 @@ pub enum BaudRate {
 }
 
 /// SPI Transmission/Receive Configuration (baud rate, mode, msb/lsb/...)
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub struct SPISetup {
     rate: BaudRate,
     mode: SPIMode,
