@@ -2,9 +2,10 @@
 APA102 LED drivers for k20 boards
  */
 
-use hal::k20::spi::{SPI, SPITransmit, SPITxResult, SPIError};
+use hal::k20::spi::{SPI, SPITransmit, SPITxResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[repr(C)]
 /// The configuration of an individual APA102 led
 pub struct APA102 {
     intensity: u8,
@@ -130,7 +131,10 @@ pub type LedStrip = [APA102];
 impl<'a> SPITransmit for &'a [APA102] {
     fn transmit(&self, spi: &SPI) -> SPITxResult {
          // Preamble
-        (0 as u32).transmit(spi);
+        match (0 as u32).transmit(spi) {
+            Ok(_) => {},
+            err => return err
+        };
 
         for idx in 0 .. self.len() - 1 {
             // 1 LED
