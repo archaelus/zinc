@@ -39,3 +39,6 @@ pub mod rtc;
 
 /// K20 Oscillator and Clocks interface
 pub mod clocks;
+
+/// K20 USB Tranceiver
+pub mod usb;
