@@ -71,6 +71,10 @@ SECTIONS
         KEEP(*(.ram_isr_vector))
     } > ram
 
+    .usbdescriptortable (NOLOAD) : ALIGN(512) {
+	*(.usbdescriptortable*)
+    } > ram
+
     /* Initialized data sections goes into RAM, startup code
        initializes Ram from Flash (copies _data->_edata to
        _data_load+offset) */
