@@ -913,12 +913,12 @@ pub mod reg {
                 1 => StopInDebugMode
             }
         },
-        0x0100 => group timer[4] {
-            0x00 => reg32 ldval {
+        0x0100 => group timer[4] { //! PIT Channel
+            0x00 => reg32 ldval { //! Timer Load Value
                 31..0 => tsv //= Timer Start Value
             },
             0x04 => reg32 cval { //! Current Timer Value
-                31..0 => tvl
+                31..0 => tvl //= Timer current value
             },
             0x08 => reg32 tctrl { //! Timer Control
                 2 => chn { //! Chain Mode Timer[N-1] must expire to tick this timer
