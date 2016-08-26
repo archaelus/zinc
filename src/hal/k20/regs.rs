@@ -1201,6 +1201,432 @@ pub mod reg {
         }
     });
 
+    ioregs!(Usb = { //! USB OTG Controller
+        0x0000 => reg8 perid { //! Peripheral ID Register
+            5..0 => id: ro //= Peripheral ID (always reads as 0x4)
+        },
+        0x0004 => reg8 idcomp { //! Peripheral ID Completent Register
+            5..0 => nid: ro //= Negated Peripheral ID (~0x4)
+        },
+        0x0008 => reg8 rev { //! Peripheral Revision
+            7..0 => rev: ro //= Revision
+        },
+        0x000C => reg8 addinfo { //! Peripheral Additional Info register
+            7..3 => irqnum: ro, //= Assigned Interrupt Request Number
+            0 => iehost: ro { //! Host/Device mode indicator
+                0 => Device,
+                1 => Host
+            }
+        },
+        0x0010 => reg8 otgistat { //! OTG Interrupt Status register
+            7 => idchg { //! This bit is set when a change in the ID Signal from the USB connector is sensed.
+                0 => NoChange,
+                1 => Change
+            },
+            6 => onemsec { //! 1msec timer expired, must be cleared by software
+                0 => NotExpired,
+                1 => Expired
+            },
+            5 => line_state_change { //! USB Line state change detection
+                0 => NoStateChange,
+                1 => StateChanged
+            },
+            3 => sessvldchg { //! This bit is set when a change in VBUS is detected indicating a session valid or a session no longer valid.
+                0 => NoChange,
+                1 => Changed
+            },
+            2 => b_sess_chg { //! This bit is set when a change in VBUS is detected on a B device.
+                0 => NoChange,
+                1 => Changed
+            },
+            0 => avbuschg { //! This bit is set when a change in VBUS is detected on an A device.
+                0 => NoChange,
+                1 => Changed
+            }
+        },
+        0x0014 => reg8 otgicr { //! OTG Interrupt Control Register
+            7 => iden { //! ID Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            6 => onemsecen { //! One Millisecond Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            5 => linestateen { //! Line State Change Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            3 => sessvlden { //! Session Valid Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            2 => bsessen { //! B Session END Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            0 => avbusen { //! A VBUS Valid Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            }
+        },
+        0x0018 => reg8 otgstat { //! OTG Status Register
+            7 => id { //! Indicates the current state of the ID pin on the USB connector
+                0 => TypeACable,
+                1 => NCorBCable
+            },
+            5 => linestatestable { //! Indicates that the internal signals that control the LINE_STATE_CHG field of OTGISTAT are stable for at least 1 millisecond.
+                0 => Unstable,
+                1 => Stable
+            },
+            3 => sess_vld { //! Session Valid
+                0 => BelowBValidThreshold,
+                1 => AboveBValidThreshold
+            },
+            2 => bsessend { //! B Session End
+                0 => BelowBEndThreshold,
+                1 => AboveBEndThreshold
+            },
+            0 => avbusvld { //! A VBUS Valid
+                0 => BelowAValidThreshold,
+                1 => AboveAValidThreshold
+            }
+        },
+        0x001C => reg8 otgctl { //! OTG Control Register
+            7 => dphigh { //! D+ Data Line pullup resistor enable
+                0 => NoPullup,
+                1 => Pullup
+            },
+            5 => dplow { //! D+ Data Line pull-down resistor enable, This bit should always be enabled together with bit 4 (DMLOW)
+
+                0 => NoPulldown,
+                1 => Pulldown
+            },
+            4 => dmlow { //! D– Data Line pull-down resistor enable
+                0 => NoPulldown,
+                1 => Pulldown
+            },
+            2 => otgen { //! On-The-Go pullup/pulldown resistor enable
+                0 => SetFromCTL,
+                1 => SetFromOTGCTL
+            }
+        },
+        0x0080 => reg8 istat { //! Interrupt Status register
+            //! Contains fields for each of the interrupt sources within the USB Module. Each of these fields are qualified with their respective interrupt enable bits. All fields of this register are logically OR'd together along with the OTG Interrupt Status Register (OTGSTAT) to form a single interrupt source for the processor's interrupt controller. After an interrupt bit has been set it may only be cleared by writing a one to the respective interrupt bit. This register contains the value of 0x00 after a reset.
+            7 => stall:set_to_clear, //= Stall Interrupt
+            6 => attach:set_to_clear, //= Attach Interrupt
+            5 => resume:set_to_clear, //= This bit is set depending upon the DP/DM signals, and can be used to signal remote wake-up signaling on the USB bus. When not in suspend mode this interrupt must be disabled.
+            4 => sleep:set_to_clear, //= This bit is set when the USB Module detects a constant idle on the USB bus for 3 ms. The sleep timer is reset by activity on the USB bus.
+            3 => tokdne:set_to_clear, //= This bit is set when the current token being processed has completed.
+            2 => softok:set_to_clear, //= This bit is set when the USB Module receives a Start Of Frame (SOF) token.
+            1 => error:set_to_clear, //= This bit is set when any of the error conditions within Error Interrupt Status (ERRSTAT) register occur. The processor must then read the ERRSTAT register to determine the source of the error.
+            0 => usbrst:set_to_clear, //= This bit is set when the USB Module has decoded a valid USB reset.
+        },
+        0x0084 => reg8 inten { //! Interrupt Enable Register
+            7 => stallen { //! STALL Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            6 => attachen { //! ATTACH Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            5 => resumeen { //! RESUME Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            4 => sleepen { //! SLEEP Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            3 => tokdneen { //! TOKDNE Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            2 => softoken { //! SOFTOK Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            1 => erroren { //! ERROR Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            0 => usbrsten { //! USBRST Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            }
+        },
+        0x0088 => reg8 errstat { //! Error Interrupt Status register
+            7 => btserr:set_to_clear, //= This bit is set when a bit stuff error is detected
+            5 => dmaerr:set_to_clear, //= This bit is set if the USB Module has requested a DMA access to read a new BDT but has not been given the bus before it needs to receive or transmit data.
+            4 => btoerr:set_to_clear, //= This bit is set when a bus turnaround timeout error occurs.
+            3 => dfn8:set_to_clear, //= This bit is set if the data field received was not 8 bits in length.
+            2 => crc16:set_to_clear, //= This bit is set when a data packet is rejected due to a CRC16 error.
+            1 => crc5eof:set_to_clear, //= This error interrupt has two functions. When the USB Module is operating in peripheral mode (HOSTMODEEN=0), this interrupt detects CRC5 errors in the token packets generated by the host. If set the token packet was rejected due to a CRC5 error. Otherwise check K20 Sub-Family Reference Manual, Rev. 1.1, Dec 2012, page 986
+            0 => piderr:set_to_clear //= This bit is set when the PID check field fails.
+        },
+        0x008C => reg8 erren { //! Error Interrupt Enable register
+            7 => btserren { //! BTSERR Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            5 => dmaerren { //! DMAERR Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            4 => btoerren { //! BTOERR Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            3 => dfn8en { //! DFN8 Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            2 => crc16en { //! CRC16 Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            1 => crc5eofen { //! CRC5/EOF Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            },
+            0 => piderren { //! PIDERR Interrupt Enable
+                0 => InterruptDisabled,
+                1 => InterruptEnabled
+            }
+        },
+        0x0090 => reg8 stat { //! USB Status Register
+            7..4 => endp: ro, //= This four-bit field encodes the endpoint address that received or transmitted the previous token. This allows the processor core to determine the BDT entry that was updated by the last USB transaction.
+            3 => tx: ro { //! Transmit Indicator (last transaction was:...)
+                0 => Rx,
+                1 => Tx
+            },
+            2 => odd:ro //= This bit is set if the last buffer descriptor updated was in the odd bank of the BDT.
+        },
+        0x0094 => reg8 ctl { //! USB Control register
+            7 => jstate, //= Live USB differential receiver JSTATE signal
+            6 => se0, //= Live USB Single Ended Zero signal
+            5 => txsuspendtokenbusy, //= In Host mode, TOKEN_BUSY is set when the USB module is busy executing a USB token. Software must not write more token commands to the Token Register when TOKEN_BUSY is set.. Software should check this field before writing any tokens to the Token Register to ensure that token commands are not lost.
+            //=In Target mode, TXD_SUSPEND is set when the SIE has disabled packet transmission and reception. Clearing this bit allows the SIE to continue token processing. This bit is set by the SIE when a SETUP Token is received allowing software to dequeue any pending packet transactions in the BDT before resuming token processing.
+            4 => reset, //= Setting this bit enables the USB Module to generate USB reset signaling. This allows the USB Module to reset USB peripherals. This control signal is only valid in Host mode (HOSTMODEEN=1). Software must set RESET to 1 for the required amount of time and then clear it to 0 to end reset signaling. For more information on reset signaling see Section 7.1.4.3 of the USB specification version 1.0.
+            3 => hostmodeen, //= When set to 1, this bit enables the USB Module to operate in Host mode. In host mode, the USB module performs USB transactions under the programmed control of the host processor.
+            2 => resume, //= When set to 1 this bit enables the USB Module to execute resume signaling. This allows the USB Module to perform remote wake-up. Software must set RESUME to 1 for the required amount of time and then clear it to 0. If the HOSTMODEEN bit is set, the USB module appends a Low Speed End of Packet to the Resume signaling when the RESUME bit is cleared. For more information on RESUME signaling see Section 7.1.4.5 of the USB specification version 1.0.
+            1 => oddrst, //= Setting this bit to 1 resets all the BDT ODD ping/pong fields to 0, which then specifies the EVEN BDT bank.
+            0 => usbensofen { //! USB Enable
+                //! Setting this bit causes the SIE to reset all of its ODD bits to the BDTs. Therefore, setting this bit resets much of the logic in the SIE. When host mode is enabled, clearing this bit causes the SIE to stop sending SOF tokens.
+                0 => DisableUSBModule,
+                1 => EnableUSBModule
+            }
+        },
+        0x0098 => reg8 addr { //! USB Address Register
+            7 => lsen { //! Low Speed Enable
+                0 => RegularSpeed,
+                1 => LowSpeed
+            },
+            6..0 => addr //= USB Address
+        },
+        0x009C => reg8 bdtpage1 { //! BDT Page Register 1
+            7..1 => bdtba //= Bits 15..9 of the BDT base address (bits 8..0 are always 0 due to 512 byte alignment)
+        },
+        0x00A0 => reg8 frmnuml { //! Frame Number Register Low
+            7..0 => frm //= This 8-bit field and the 3-bit field in the Frame Number Register High are used to compute the address where the current Buffer Descriptor Table (BDT) resides in system memory.
+        },
+        0x00A4 => reg8 frmnumh { //! Frame Number Register High
+            2..0 => frm //= This 3-bit field and the 8-bit field in the Frame Number Register Low are used to compute the address where the current Buffer Descriptor Table (BDT) resides in system memory.
+        },
+        0x00A8 => reg8 token { //! Token register
+            7..4 => tokenpid { //! Contains the token type executed by the USB module.
+                0b0001 => OutToken,
+                0b1001 => InToken,
+                0b1101 => SetupToken
+            },
+            3..0 => tokenendpt //= Holds the Endpoint address for the token command. The four bit value written must be a valid endpoint.
+        },
+        0x00AC => reg8 softhld { //! SOF Threshold Register
+            7..0 => cnt //= Represents the SOF count threshold in byte times.
+        },
+        0x00B0 => reg8 bdtpage2 { //! BDT Page Register 2
+            7..1 => bdtba //= Bits 23..16 of the BDT base address (bits 8..0 are always 0 due to 512 byte alignment)
+        },
+        0x00B4 => reg8 bdtpage3 { //! BDT Page Register 3
+            7..1 => bdtba //= Bits 31..24 of the BDT base address (bits 8..0 are always 0 due to 512 byte alignment)
+        },
+        0x00C0 => group endpt[16] {
+            0x00 => reg8 endpt {
+                7 => hostwohub, //= This is a Host mode only field and is present in the control register for endpoint 0 (ENDPT0) only. When set this bit allows the host to communicate to a directly connected low speed device. When cleared, the host produces the PRE_PID. It then switches to low-speed signaling when sends a token to a low speed device as required to communicate with a low speed device through a hub.
+                6 => retrydis, //= This is a Host mode only bit and is present in the control register for endpoint 0 (ENDPT0) only. When set this bit causes the host to not retry NAK'ed (Negative Acknowledgement) transactions. When a transaction is NAKed, the BDT PID field is updated with the NAK PID, and the TOKEN_DNE interrupt is set. When this bit is cleared NAKed transactions is retried in hardware. This bit must be set when the host is attempting to poll an interrupt endpoint.
+                4 => epctldis { //! This bit, when set, disables control (SETUP) transfers. When cleared, control transfers are enabled. This applies if and only if the EPRXEN and EPTXEN bits are also set.
+                    0 => SetupEnabled,
+                    1 => SetupDisabled
+                },
+                3 => eprxen { //! Endpoint RX Enable
+                    0 => RxDisabled,
+                    1 => RxEnabled
+                },
+                2 => eptxen { //! Endpoint TX Enable
+                    0 => TxDisabled,
+                    1 => TxEnabled
+                },
+                1 => epstall { //! When set this bit indicates that the endpoint is called. This bit has priority over all other control bits in the EndPoint Enable Register, but it is only valid if EPTXEN=1 or EPRXEN=1. Any access to this endpoint causes the USB Module to return a STALL handshake. After an endpoint is stalled it requires intervention from the Host Controller.
+                    0 => NotStalled,
+                    1 => Stalled
+                },
+                0 => ephshk { //! When set this bet enables an endpoint to perform handshaking during a transaction to this endpoint. This bit is generally 1 unless the endpoint is Isochronous.
+                    0 => NoHandshaking, //= Isochronous transfer only?
+                    1 => Handshake
+                }
+            },
+            0x01 => reg8 pad1 {},
+            0x02 => reg8 pad2 {},
+            0x03 => reg8 pad3 {}
+        },
+        0x0100 => reg8 usbctrl { //! USB Control Register
+            7 => susp { //! Places the USB tranceiver in suspend state
+                0 => NotSuspended,
+                1 => Suspended
+            },
+            6 => pde { //! Enable the weak pulldowns on D+/D-
+                0 => PulldownsDisabled,
+                1 => PulldownsEnabled
+            }
+        },
+        0x0104 => reg8 observe { //! USB OTG Observe regiser
+            7 => dppu:ro { //! D+ Pullup
+                0 => PullupDisabled,
+                1 => PullupEnabled
+            },
+            6 => dppd:ro { //! D+ Pulldown
+                0 => PulldownDisabled,
+                1 => PulldownEnabled
+            },
+            4 => dmpd:ro { //! D- Pulldown
+                0 => PulldownDisabled,
+                1 => PulldownEnabled
+            }
+        },
+        0x0108 => reg8 control { //! USB OTG Control register
+            4 => dppullupnonotg { //! Provides control of the DP Pullup in the USB OTG module, if USB is configured in non-OTG device mode.
+                0 => PullupNotEnabled,
+                1 => PullupEnabled
+            }
+        },
+        0x010C => reg8 usbtrc0 { //! USB Transceiver Control Register 0
+            7 => usbreset: set_to_clear, //= USB Reset
+            6 => undocumented, //= http://kevincuzner.com/2014/12/12/teensy-3-1-bare-metal-writing-a-usb-driver/ suggests this is an undocumented interrupt bit.
+            5 => usbresmen { //! Asynchronous Resume Interrupt Enable
+                0 => WakeupDisabled, //= USB asynchronous wakeup from suspend mode disabled.
+                1 => WakeupEnabled
+            },
+            1 => sync_det:ro { //! Synchronous USB Interrupt Detect
+                0 => SyncNotDetected,
+                1 => SyncDetected
+            },
+            0 => usb_resume_int: ro { //! USB Asynchronous Interrupt
+                0 => NoInterrupt,
+                1 => InterruptGenerated
+            }
+        },
+        0x0114 => reg8 usbfrmadjust { //! Frame Adjust Register
+            7..0 => adj //= Frame Adjustment. In Host mode, the frame adjustment is a twos complement number that adjusts the period of each USB frame in 12-MHz clock periods. A SOF is normally generated every 12,000 12-MHz clock cycles. The Frame Adjust Register can adjust this by -128 to +127 to compensate for inaccuracies in the USB 48-MHz clock. Changes to the ADJ bit take effect at the next start of the next frame.
+        }
+    });
+
+//     ioregs!(BufferDescriptor = { //! An individual K20 Buffer Descriptor
+//         0 => reg32 control { //! Control attributes
+//             25..16 => bc, //= Byte Count
+//             7 => own { //! Determines whether the processor or the USB-FS currently owns the buffer.
+//                 0 => Processor, //= this buffer descriptor can be modified by code/the CPU
+//                 1 => Controller //= this buffer descriptor can only be modifed by the USB controller
+//             },
+//             6 => data01 { //! Defines whether a DATA0 field (DATA0/1=0) or a DATA1 (DATA0/1=1) field was transmitted or received. It is unchanged by the USB-FS.
+//                 0 => Data0,
+//                 1 => Data1
+//             },
+//             5 => keep, //= Tok[3] _or_ 'Keep'. Typically, this bit is 1 with ISO endpoints feeding a FIFO. The microprocessor is not informed that a token has been processed, the data is simply transferred to or from the FIFO. When KEEP is set, normally the NINC bit is also set to prevent address increment.
+//             4 => ninc, //= Tok[2] _or_ 'No Increment'. Disables the DMA engine address increment. This forces the DMA engine to read or write from the same address. This is useful for endpoints when data needs to be read from or written to a single location such as a FIFO. Typically this bit is set with the KEEP bit for ISO endpoints that are interfacing to a FIFO.
+//             3 => dts, //= Tok[1] _or_ 'Data Toggle Synchronization'. Setting this bit enables the USB-FS to perform Data Toggle Synchronization.
+//             2 => bdt_stall, //= Tok[0] _or_ trigger STALL handshake if this BDT is used. Setting this bit causes the USB-FS to issue a STALL handshake if a token is received by the SIE that would use the BDT in this location.
+//         },
+//         4 => reg32 addr { //! Buffer Address
+//             31..0 => addr //= The 32bit address of the buffer in memory.
+//         }
+//     });
+//
+//     // Add an override field for pid_tok over 5..2 of a BufferDescriptor. (Hand implement what ioregs would)
+//     impl BufferDescriptor_control {
+//         /// Return the token for this buffer descriptor (overloaded with keep/ninc/dts/bdt_stall
+//         pub fn pid_tok(&self) -> u32 {
+//             BufferDescriptor_control_Get::new(self)
+//                 .pid_tok()
+//         }
+//
+//         /// Set the value of the pid_tok field
+//         pub fn set_pid_tok<'a>(&'a self, new_value: u32) -> BufferDescriptor_control_Update<'a> {
+//             let mut setter: BufferDescriptor_control_Update = BufferDescriptor_control_Update::new(self);
+//             setter.set_pid_tok(new_value);
+//             setter
+//         }
+//     }
+//
+//     impl BufferDescriptor_control_Get {
+//         /// Return the token for this buffer descriptor (overloaded with keep/ninc/dts/bdt_stall
+//         pub fn pid_tok(&self) -> u32 {
+//             ((self.value >> 2) & 0b1111)
+//         }
+//     }
+//
+//     impl<'a> BufferDescriptor_control_Update<'a> {
+//         /// Set the value of the pid_tok field
+//         #[inline(always)]
+//         pub fn set_pid_tok<'b>(&'b mut self, new_value: u32) -> &'b mut BufferDescriptor_control_Update<'a> {
+//
+//               self.value = (self.value & !(0b1111 << 2)) | ((new_value as u32) & 0b1111) << 2;
+//               self.mask |= 0b1111 << 2;
+//               self
+//         }
+//
+//     }
+
+    impl<'a> Usb_istat_Update<'a> {
+        /// Clear all ISR flags
+        #[inline(always)]
+        pub fn clear_all<'b>(&'b mut self) -> &'b mut Usb_istat_Update<'a> {
+            self.value = 0xFF;
+            self.mask = 0xFF;
+            self
+        }
+    }
+
+    impl<'a> Usb_errstat_Update<'a> {
+        /// Clear all error flags
+        #[inline(always)]
+        pub fn clear_all<'b>(&'b mut self) -> &'b mut Usb_errstat_Update<'a> {
+            self.value = 0xFF;
+            self.mask = 0xFF;
+            self
+        }
+    }
+
+    impl<'a> Usb_otgistat_Update<'a> {
+        /// Clear all OTG Interrupt status flags
+        #[inline(always)]
+        pub fn clear_all<'b>(&'b mut self) -> &'b mut Usb_otgistat_Update<'a> {
+            self.value = 0xFF;
+            self.mask = 0xFF;
+            self
+        }
+    }
+
+    impl<'a> Usb_erren_Update<'a> {
+        /// Enables all the USB Error Interrupts. (0xBF as bit[6] is reserved)
+        #[inline(always)]
+        pub fn enable_all<'b>(&'b mut self) -> &'b mut Usb_erren_Update<'a> {
+            self.value = 0xBF;
+            self.mask = 0xBF;
+            self
+        }
+    }
+
     impl From<Spi_ctar_ctar_dbr> for u32 {
         fn from(dbr: Spi_ctar_ctar_dbr) -> u32 {
             match dbr {
@@ -1254,5 +1680,6 @@ pub mod reg {
         #[link_name="k20_iomem_PIT"] pub static PIT: Pit;
         #[link_name="k20_iomem_SPI0"] pub static SPI0: Spi;
         #[link_name="k20_iomem_SPI1"] pub static SPI1: Spi;
+        #[link_name="k20_iomem_USB"] pub static USB: Usb;
     }
 }
