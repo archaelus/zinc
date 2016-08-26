@@ -102,7 +102,7 @@ pub mod reg {
             6 => plls { //! PLL Select
                 0x0 => FLL,
                 0x1 => PLL
-            }, 
+            },
             7 => lolie0 { //! Loss of Lock Interrupt Enable
                 0x0 => NoInterrupt,
                 0x1 => Interrupt
@@ -338,7 +338,7 @@ pub mod reg {
             0..1 => uart0txsrc { //! UART 0 transmit data source select
                 0b00 => Uart1Tx,
                 0b01 => Uart1TxModFtm1Ch0,
-                0b10 => Uart1TxModFtm2Ch0,            
+                0b10 => Uart1TxModFtm2Ch0,
             }
         },
         0x1018 => reg32 sopt7 { //! System Options Register 7
@@ -1635,7 +1635,7 @@ pub mod reg {
             }
         }
     }
-    
+
     impl From<Spi_ctar_ctar_pbr> for u32 {
         fn from(pbr: Spi_ctar_ctar_pbr) -> u32 {
             match pbr {
@@ -1646,7 +1646,7 @@ pub mod reg {
             }
         }
     }
-    
+
     impl From<Spi_ctar_ctar_br> for u32 {
         fn from(br: Spi_ctar_ctar_br) -> u32 {
             match br {
@@ -1669,7 +1669,7 @@ pub mod reg {
             }
         }
     }
-  
+
     extern {
         #[link_name="k20_iomem_OSC"] pub static OSC: Osc;
         #[link_name="k20_iomem_MCG"] pub static MCG: Mcg;
