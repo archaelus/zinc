@@ -24,6 +24,7 @@ use syntax::ast::MetaItem;
 use syntax::codemap::{Span, DUMMY_SP};
 use syntax::ext::base::{Annotatable, ExtCtxt, MultiDecorator};
 use syntax::ext::build::AstBuilder;
+use syntax::symbol::Symbol;
 
 macro_rules! and_return {
   ($a:stmt) => (
@@ -36,7 +37,7 @@ macro_rules! and_return {
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-  reg.register_syntax_extension(syntax::parse::token::intern("zinc_main"),
+  reg.register_syntax_extension(Symbol::intern("zinc_main"),
   MultiDecorator(Box::new(decorator_zinc_main)));
 }
 

@@ -20,7 +20,8 @@ use syntax::ast;
 use syntax::ptr::P;
 use syntax::codemap::{respan, Span, Spanned};
 use syntax::ext::build::AstBuilder;
-use syntax::parse::token;
+use syntax::symbol;
+use syntax::symbol::Symbol;
 
 use super::super::node;
 
@@ -51,20 +52,20 @@ fn list_attribute_spanned(cx: &ExtCtxt, name: Spanned<&'static str>,
     list: Vec<Spanned<&'static str>>) -> ast::Attribute {
   let words =
    list.into_iter()
-   .map(|word| cx.meta_list_item_word(word.span, token::InternedString::new(word.node)));
-  let allow = cx.meta_list(name.span, token::InternedString::new(name.node),
+   .map(|word| cx.meta_list_item_word(word.span, Symbol::intern(word.node)));
+  let allow = cx.meta_list(name.span, Symbol::intern(name.node),
                                 FromIterator::from_iter(words));
   cx.attribute(name.span, allow)
 }
 
 /// Generate a `#[doc="..."]` attribute of the given type
-pub fn doc_attribute(cx: &ExtCtxt, docstring: token::InternedString)
+pub fn doc_attribute(cx: &ExtCtxt, docstring: symbol::Symbol)
                      -> ast::Attribute {
   use syntax::codemap::DUMMY_SP;
 
   let s: ast::LitKind = ast::LitKind::Str(docstring, ast::StrStyle::Cooked);
   let attr =
-    cx.meta_name_value(DUMMY_SP, token::InternedString::new("doc"), s);
+    cx.meta_name_value(DUMMY_SP, Symbol::intern("doc"), s);
   cx.attribute(DUMMY_SP, attr)
 }
 
@@ -175,6 +176,6 @@ pub fn getter_name(cx: &ExtCtxt, path: &Vec<String>) -> ast::Ident {
   path_ident(cx, &s)
 }
 
-pub fn intern_string(cx: &ExtCtxt, s: String) -> token::InternedString {
-  cx.ident_of(s.as_str()).name.as_str()
+pub fn intern_string(cx: &ExtCtxt, s: String) -> symbol::Symbol {
+  cx.ident_of(s.as_str()).name
 }
